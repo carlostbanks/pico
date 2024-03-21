@@ -1,29 +1,54 @@
 import React, { FC, useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, clusterApiUrl } from '@solana/web3.js';
+import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+
+// At the top of your MyComponent.tsx file
+type TokenInfo = {
+    uiAmount: number | null;
+    uiAmountString: string;
+    mint: string;
+  };
+  
 
 const MyComponent: FC = () => {
   const { publicKey, connected } = useWallet();
-  const [balance, setBalance] = useState<number | null>(null);
+  const [tokens, setTokens] = useState<TokenInfo[]>([]);
+  const [solBalance, setSolBalance] = useState<number | null>(null);
+
 
   useEffect(() => {
     if (!publicKey) return;
+    console.log("Public Key:", publicKey?.toString());
 
-    const connection = new Connection(clusterApiUrl('devnet')); // Use 'mainnet-beta' for production
+  
+    const connection = new Connection(clusterApiUrl('devnet'), "confirmed");
     connection.getBalance(publicKey).then((lamports) => {
-      // Convert lamports to SOL (1 SOL = 1,000,000,000 lamports)
-      setBalance(lamports / 1e9);
-    });
+        const sol = lamports / LAMPORTS_PER_SOL;
+        setSolBalance(sol);
+      }).catch(err => console.error(err));
+      
   }, [publicKey, connected]);
 
   return (
-    <div className="flex justify-center items-center h-screen">
+    <div className="flex flex-col items-center justify-center h-screen">
         <WalletMultiButton />
-      {connected && balance !== null ? (
-        <p>Balance: {balance} SOL</p>
-      ) : null}
+        {connected && (
+            <div>
+            <h3 className="text-lg font-bold">Balances:</h3>
+            <p>SOL Balance: {solBalance ? solBalance.toFixed(2) : 'Loading...'}</p>
+            <h4 className="text-md font-semibold">Token Balances:</h4>
+            <ul>
+                {tokens.map((token, index) => (
+                <li key={index}>
+                    {token.uiAmount} {token.uiAmountString} (Mint: {token.mint})
+                </li>
+                ))}
+            </ul>
+            </div>
+        )}
     </div>
+
   );
 };
 
